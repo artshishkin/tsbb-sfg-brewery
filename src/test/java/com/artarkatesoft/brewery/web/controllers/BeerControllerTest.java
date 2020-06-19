@@ -12,6 +12,7 @@ import org.assertj.core.util.Lists;
 import org.hamcrest.collection.IsCollectionWithSize;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -19,6 +20,9 @@ import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
@@ -44,22 +48,14 @@ import static org.springframework.http.MediaType.APPLICATION_JSON;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@ExtendWith(MockitoExtension.class)
+@WebMvcTest(BeerController.class)
 class BeerControllerTest {
 
-    @InjectMocks
-    BeerController beerController;
-
-    @Mock
+    @MockBean
     BeerService beerService;
 
-    private MockMvc mockMvc;
-
-    @Captor
-    ArgumentCaptor<String> beerNameCaptor;
-
-    @Captor
-    ArgumentCaptor<BeerStyleEnum> beerStyleEnumCaptor;
+    @Autowired
+    MockMvc mockMvc;
 
     private BeerDto validBeer = BeerDto.builder()
             .beerName("BeerName")
@@ -77,11 +73,6 @@ class BeerControllerTest {
     @BeforeEach
     void setUp() {
 
-        mockMvc = MockMvcBuilders.standaloneSetup(beerController)
-                .setMessageConverters(jackson2HttpMessageConverter()).build();
-
-//        mockMvc = MockMvcBuilders.standaloneSetup(beerController).build();
-
         List<BeerDto> beers = Lists.list(validBeer, BeerDto.builder()
                 .beerName("Beer4")
                 .beerStyle(BeerStyleEnum.PORTER)
@@ -95,19 +86,6 @@ class BeerControllerTest {
                 .build());
 
         beerPagedList = new BeerPagedList(beers, PageRequest.of(1, 1), 2);
-
-    }
-
-    private MappingJackson2HttpMessageConverter jackson2HttpMessageConverter() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        //start
-        //This can be commented out and result won't change???
-//        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
-//        objectMapper.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, true);
-//        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        //end
-        objectMapper.registerModule(new JavaTimeModule());
-        return new MappingJackson2HttpMessageConverter(objectMapper);
     }
 
     @Test
@@ -127,27 +105,32 @@ class BeerControllerTest {
         System.out.println(result.getResponse().getContentAsString());
     }
 
-    @DisplayName("Test list beers - No parameters")
-    @Test
-    void listBeersAnything() throws Exception {
-        //given
+    @Nested
+    @DisplayName("List Ops:")
+    class ListTests{
 
-        given(beerService.listBeers(beerNameCaptor.capture(), beerStyleEnumCaptor.capture(), any(PageRequest.class))).willReturn(beerPagedList);
-//        given(beerService.listBeers(anyString(), any(BeerStyleEnum.class), any(PageRequest.class))).willReturn(beerPagedList);
-        //when
-        ResultActions resultActions = mockMvc.perform(
-                get("/api/v1/beer").accept(APPLICATION_JSON));
-        //then
-        MvcResult mvcResult = resultActions.andExpect(status().isOk())
-                .andExpect(content().contentType(APPLICATION_JSON))
-                .andExpect(jsonPath("$.content", hasSize(2)))
-                .andExpect(jsonPath("$.content[0].id", is(validBeer.getId().toString())))
-                .andReturn();
+        @Captor
+        ArgumentCaptor<String> beerNameCaptor;
 
-        System.out.println(mvcResult.getResponse().getContentAsString());
-//        then(beerService).should().listBeers(beerNameCaptor.getValue(), beerStyleEnumCaptor.getValue(),  any(PageRequest.class));
+        @Captor
+        ArgumentCaptor<BeerStyleEnum> beerStyleEnumCaptor;
 
+        @DisplayName("Test list beers - No parameters")
+        @Test
+        void listBeersAnything() throws Exception {
+            //given
+            given(beerService.listBeers(beerNameCaptor.capture(), beerStyleEnumCaptor.capture(), any(PageRequest.class))).willReturn(beerPagedList);
+            //when
+            ResultActions resultActions = mockMvc.perform(
+                    get("/api/v1/beer").accept(APPLICATION_JSON));
+            //then
+            MvcResult mvcResult = resultActions.andExpect(status().isOk())
+                    .andExpect(content().contentType(APPLICATION_JSON))
+                    .andExpect(jsonPath("$.content", hasSize(2)))
+                    .andExpect(jsonPath("$.content[0].id", is(validBeer.getId().toString())))
+                    .andReturn();
+
+//            System.out.println(mvcResult.getResponse().getContentAsString());
+        }
     }
-
-
 }
