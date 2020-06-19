@@ -5,6 +5,7 @@ import com.artarkatesoft.brewery.services.BeerOrderService;
 import com.artarkatesoft.brewery.web.model.*;
 import org.assertj.core.util.Lists;
 import org.hamcrest.core.Is;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,6 +18,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers;
+import sun.print.resources.serviceui;
 
 import java.io.UnsupportedEncodingException;
 import java.time.OffsetDateTime;
@@ -69,6 +71,12 @@ class BeerOrderControllerTest {
                 .build();
 
         orders = Lists.list(validOrder, validOrder2);
+    }
+
+    @AfterEach
+    void tearDown() {
+        //why we need to reset MockBean???
+        reset(beerOrderService);
     }
 
     @DisplayName("Order List Test")
