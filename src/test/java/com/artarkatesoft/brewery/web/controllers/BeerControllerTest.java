@@ -4,6 +4,10 @@ import com.artarkatesoft.brewery.services.BeerService;
 import com.artarkatesoft.brewery.web.model.BeerDto;
 import com.artarkatesoft.brewery.web.model.BeerPagedList;
 import com.artarkatesoft.brewery.web.model.BeerStyleEnum;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.assertj.core.util.Lists;
 import org.hamcrest.collection.IsCollectionWithSize;
 import org.junit.jupiter.api.BeforeEach;
@@ -18,12 +22,15 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.ResultActions;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
 import java.math.BigDecimal;
 import java.time.OffsetDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 
@@ -70,7 +77,10 @@ class BeerControllerTest {
     @BeforeEach
     void setUp() {
 
-        mockMvc = MockMvcBuilders.standaloneSetup(beerController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(beerController)
+                .setMessageConverters(jackson2HttpMessageConverter()).build();
+
+//        mockMvc = MockMvcBuilders.standaloneSetup(beerController).build();
 
         List<BeerDto> beers = Lists.list(validBeer, BeerDto.builder()
                 .beerName("Beer4")
@@ -88,17 +98,33 @@ class BeerControllerTest {
 
     }
 
+    private MappingJackson2HttpMessageConverter jackson2HttpMessageConverter() {
+        ObjectMapper objectMapper = new ObjectMapper();
+        //start
+        //This can be commented out and result won't change???
+//        objectMapper.configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
+//        objectMapper.configure(SerializationFeature.WRITE_DATE_TIMESTAMPS_AS_NANOSECONDS, true);
+//        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
+        //end
+        objectMapper.registerModule(new JavaTimeModule());
+        return new MappingJackson2HttpMessageConverter(objectMapper);
+    }
+
     @Test
     void getBeerById() throws Exception {
         //given
         given(beerService.findBeerById(any(UUID.class))).willReturn(validBeer);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ");
         //when
         ResultActions resultActions = mockMvc.perform(get("/api/v1/beer/{beerId}", validBeer.getId()));
         //then
-        resultActions.andExpect(status().isOk())
+        MvcResult result = resultActions.andExpect(status().isOk())
                 .andExpect(content().contentType(APPLICATION_JSON))
                 .andExpect(jsonPath("$.id", is(validBeer.getId().toString())))
-                .andExpect(jsonPath("$.beerName", is("BeerName")));
+                .andExpect(jsonPath("$.beerName", is("BeerName")))
+                .andExpect(jsonPath("$.createdDate", is(dateTimeFormatter.format(validBeer.getCreatedDate()))))
+                .andReturn();
+        System.out.println(result.getResponse().getContentAsString());
     }
 
     @DisplayName("Test list beers - No parameters")
@@ -112,11 +138,13 @@ class BeerControllerTest {
         ResultActions resultActions = mockMvc.perform(
                 get("/api/v1/beer").accept(APPLICATION_JSON));
         //then
-        resultActions.andExpect(status().isOk())
+        MvcResult mvcResult = resultActions.andExpect(status().isOk())
                 .andExpect(content().contentType(APPLICATION_JSON))
                 .andExpect(jsonPath("$.content", hasSize(2)))
                 .andExpect(jsonPath("$.content[0].id", is(validBeer.getId().toString())))
-        ;
+                .andReturn();
+
+        System.out.println(mvcResult.getResponse().getContentAsString());
 //        then(beerService).should().listBeers(beerNameCaptor.getValue(), beerStyleEnumCaptor.getValue(),  any(PageRequest.class));
 
     }
