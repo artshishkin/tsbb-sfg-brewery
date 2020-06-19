@@ -27,6 +27,7 @@ import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
+import static org.hamcrest.collection.IsCollectionWithSize.*;
 import static org.hamcrest.core.Is.is;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -111,11 +112,12 @@ class BeerControllerTest {
         ResultActions resultActions = mockMvc.perform(
                 get("/api/v1/beer").accept(APPLICATION_JSON));
         //then
-        resultActions.andExpect(status().isOk());
-//                .andExpect(content().contentType(APPLICATION_JSON))
-//                .andExpect(jsonPath("$.id", IsCollectionWithSize.hasSize(2)))
+        resultActions.andExpect(status().isOk())
+                .andExpect(content().contentType(APPLICATION_JSON))
+                .andExpect(jsonPath("$.content", hasSize(2)))
+                .andExpect(jsonPath("$.content[0].id", is(validBeer.getId().toString())))
         ;
-//        then(beerService).should().listBeers(anyString(), any(), any());
+//        then(beerService).should().listBeers(beerNameCaptor.getValue(), beerStyleEnumCaptor.getValue(),  any(PageRequest.class));
 
     }
 
