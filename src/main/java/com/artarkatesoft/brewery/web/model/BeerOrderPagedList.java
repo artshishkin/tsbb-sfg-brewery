@@ -26,7 +26,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
 import java.util.List;
-//@JsonIgnoreProperties(ignoreUnknown = true)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class BeerOrderPagedList extends PageImpl<BeerOrderDto> {
 
     @JsonCreator(mode = JsonCreator.Mode.PROPERTIES)
