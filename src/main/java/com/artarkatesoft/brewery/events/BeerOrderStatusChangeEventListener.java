@@ -26,6 +26,9 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.Future;
+
 @Slf4j
 @Component
 public class BeerOrderStatusChangeEventListener {
@@ -58,5 +61,13 @@ public class BeerOrderStatusChangeEventListener {
         } catch (Throwable t) {
             log.error("Error Preforming callback for order: " + event.getBeerOrder().getId(), t);
         }
+    }
+
+    public String getRequest(String url){
+        return restTemplate.getForObject(url, String.class);
+    }
+    @Async
+    public Future<String> getRequestAsync(String url){
+        return CompletableFuture.completedFuture(restTemplate.getForObject(url, String.class));
     }
 }
