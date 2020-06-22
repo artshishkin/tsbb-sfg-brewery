@@ -2,6 +2,7 @@ package com.artarkatesoft.brewery.events;
 
 import com.artarkatesoft.brewery.domain.BeerOrder;
 import com.artarkatesoft.brewery.domain.OrderStatusEnum;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.client.RestClientTest;
@@ -11,6 +12,7 @@ import org.springframework.test.web.client.MockRestServiceServer;
 import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.UUID;
+import java.util.concurrent.*;
 
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.method;
 import static org.springframework.test.web.client.match.MockRestRequestMatchers.requestTo;
@@ -25,8 +27,13 @@ class BeerOrderStatusChangeEventListenerClientTest {
     @Autowired
     private MockRestServiceServer server;
 
+    @AfterEach
+    void tearDown() {
+        server.reset();
+    }
+
     @Test
-    void listen() throws InterruptedException {
+    void listen() throws InterruptedException, TimeoutException, ExecutionException {
         //given
         BeerOrder beerOrder = BeerOrder.builder()
                 .orderStatus(OrderStatusEnum.READY)
@@ -46,6 +53,30 @@ class BeerOrderStatusChangeEventListenerClientTest {
 
         //then
         Thread.sleep(500);//Because listen() is asynchronous method we need to set pause
+        server.verify();
+    }
+
+    @Test
+    void listenFuture() throws InterruptedException, TimeoutException, ExecutionException {
+        //given
+        BeerOrder beerOrder = BeerOrder.builder()
+                .orderStatus(OrderStatusEnum.READY)
+                .id(UUID.randomUUID())
+                .orderStatusCallbackUrl("/update")
+                .createdDate(Timestamp.valueOf(LocalDateTime.now()))
+                .build();
+
+        BeerOrderStatusChangeEvent event = new BeerOrderStatusChangeEvent(beerOrder, OrderStatusEnum.NEW);
+
+        server.expect(requestTo("/update"))
+                .andExpect(method(HttpMethod.POST))
+                .andRespond(withSuccess());
+
+        //when
+        Future<Void> listen = listener.listenReturnFuture(event);
+
+        //then
+        listen.get(1000, TimeUnit.MILLISECONDS);
         server.verify();
     }
 }

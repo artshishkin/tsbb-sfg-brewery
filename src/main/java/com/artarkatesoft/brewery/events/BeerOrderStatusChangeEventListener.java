@@ -63,11 +63,36 @@ public class BeerOrderStatusChangeEventListener {
         }
     }
 
-    public String getRequest(String url){
+    @Async
+    @EventListener
+    public Future<Void> listenReturnFuture(BeerOrderStatusChangeEvent event) {
+        System.out.println("I got an order status change event");
+        System.out.println(event);
+
+        OrderStatusUpdate update = OrderStatusUpdate.builder()
+                .id(event.getBeerOrder().getId())
+                .orderId(event.getBeerOrder().getId())
+                .version(event.getBeerOrder().getVersion() != null ? event.getBeerOrder().getVersion().intValue() : null)
+                .createdDate(dateMapper.asOffsetDateTime(event.getBeerOrder().getCreatedDate()))
+                .lastModifiedDate(dateMapper.asOffsetDateTime(event.getBeerOrder().getLastModifiedDate()))
+                .orderStatus(event.getBeerOrder().getOrderStatus().toString())
+                .customerRef(event.getBeerOrder().getCustomerRef())
+                .build();
+        try {
+            log.debug("Posting to callback url");
+            restTemplate.postForObject(event.getBeerOrder().getOrderStatusCallbackUrl(), update, String.class);
+        } catch (Throwable t) {
+            log.error("Error Preforming callback for order: " + event.getBeerOrder().getId(), t);
+        }
+        return null;
+    }
+
+    public String getRequest(String url) {
         return restTemplate.getForObject(url, String.class);
     }
+
     @Async
-    public Future<String> getRequestAsync(String url){
+    public Future<String> getRequestAsync(String url) {
         return CompletableFuture.completedFuture(restTemplate.getForObject(url, String.class));
     }
 }
